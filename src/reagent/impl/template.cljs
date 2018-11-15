@@ -126,6 +126,22 @@
                                                                   (name old-class)
                                                                   old-class))))))))
 
+(defn shallow-copy [obj] (.assign Object #js {} obj))
+
+(defn set-id-class-obj
+  "set-id-class when props is a JS objec"
+  [props id-class]
+  (let [id ($ id-class :id)
+        class ($ id-class :class)
+        props (shallow-copy props)]
+    (cond-> props
+      (and (some? id) (nil? (:id props)))
+      ($! :id id)
+
+      class
+      ($! :class (let [old-class ($ props :class)]
+                   (if (nil? old-class) class (str class " " old-class)))))))
+
 (defn stringify-class [{:keys [class] :as props}]
   (if (coll? class)
     (->> class
@@ -139,9 +155,14 @@
     props))
 
 (defn convert-props [props id-class]
-  (let [props (-> props
-                  stringify-class
-                  (set-id-class id-class))]
+  (let [props (cond
+                (or (nil? props) (map? props))
+                (-> props
+                    stringify-class
+                    (set-id-class id-class))
+
+                (js-val? props)
+                (set-id-class-obj props id-class))]
     (if ($ id-class :custom)
       (convert-custom-prop-value props)
       (convert-prop-value props))))
@@ -346,7 +367,7 @@
 (defn native-element [parsed argv first]
   (let [comp ($ parsed :name)
         props (nth argv first nil)
-        hasprops (or (nil? props) (map? props))
+        hasprops (or (nil? props) (map? props) (object? props))
         jsprops (convert-props (if hasprops props) parsed)
         first-child (+ first (if hasprops 1 0))]
     (if (input-component? comp)
