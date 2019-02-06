@@ -11,7 +11,6 @@
                                                   assert-some assert-component
                                                   assert-js-object assert-new-state
                                                   assert-callable]]
-            [reagent.interop :refer-macros [$ $!]]
             [reagent.dom :as dom]))
 
 (def is-client util/is-client)
@@ -104,8 +103,7 @@
   (batch/flush-after-render))
 
 (defn create-class
-  "Create a component, React style. Should be called with a map,
-  looking like this:
+  "Creates JS class based on provided Clojure map, for example:
 
   ```cljs
   {:get-initial-state (fn [this])
@@ -119,7 +117,13 @@
    :reagent-render (fn [args....])}   ;; or :render (fn [this])
   ```
 
-  Everything is optional, except either :reagent-render or :render."
+  Everything is optional, except either :reagent-render or :render.
+
+  Map keys should use `React.Component` method names (https://reactjs.org/docs/react-component.html),
+  and can be provided in snake-case or camelCase.
+  Constructor function is defined using key `:get-initial-state`.
+
+  React built-in static methods or properties are automatically defined as statics."
   [spec]
   (comp/create-class spec))
 
@@ -194,11 +198,27 @@
   [this]
   (dom/dom-node this))
 
+(defn class-names
+  "Function which normalizes and combines class values to a string
+
+  Reagent allows classes to be defined as:
+  - Strings
+  - Named objects (Symbols or Keywords)
+  - Collections of previous types"
+  ([])
+  ([class] (util/class-names class))
+  ([class1 class2] (util/class-names class1 class2))
+  ([class1 class2 & others] (apply util/class-names class1 class2 others)))
+
 (defn merge-props
-  "Utility function that merges two maps, handling :class and :style
-  specially, like React's transferPropsTo."
-  [defaults props]
-  (util/merge-props defaults props))
+  "Utility function that merges some maps, handling `:class` and `:style`.
+
+  The :class value is always normalized (using `class-names`) even if no
+  merging is done."
+  ([] (util/merge-props))
+  ([defaults] (util/merge-props defaults))
+  ([defaults props] (util/merge-props defaults props))
+  ([defaults props & others] (apply util/merge-props defaults props others)))
 
 (defn flush
   "Render dirty components immediately to the DOM.
@@ -207,8 +227,6 @@
   batching of updates there."
   []
   (batch/flush))
-
-
 
 ;; Ratom
 

@@ -1,10 +1,8 @@
 (ns reagenttest.testreagent
   (:require [cljs.test :as t :refer-macros [is deftest testing]]
             [react :as react]
-            [create-react-class :as create-react-class]
             [reagent.ratom :as rv :refer-macros [reaction]]
             [reagent.debug :as debug :refer-macros [dbg println log dev?]]
-            [reagent.interop :refer-macros [$ $!]]
             [reagent.core :as r]
             [reagent.dom.server :as server]
             [reagent.impl.util :as util]
@@ -397,7 +395,7 @@
                  (swap! top-ran inc)
                  (r/create-class
                   {:component-did-mount #(swap! ran inc)
-                   :component-function
+                   :reagent-render
                    (fn [p a]
                      (is (= 1 a))
                      (swap! ran inc)
@@ -441,15 +439,18 @@
     (is (= (rstr (ae [:div [:div "foo"]]))
            (rstr (ae [:div (ce "div" nil "foo")]))))))
 
-(def ndiv (create-react-class
-            #js {:displayName "ndiv"
-                 :render
-                 (fn []
-                   (this-as
-                     this
-                     (r/create-element
-                       "div" #js{:className ($ this :props.className)}
-                       ($ this :props.children))))}))
+(def ndiv (let [cmp (fn [])]
+            (gobj/extend
+              (.-prototype cmp)
+              (.-prototype react/Component)
+              #js {:render (fn []
+                             (this-as
+                               this
+                               (r/create-element
+                                 "div" #js {:className (.. this -props -className)}
+                                 (.. this -props -children))))})
+            (gobj/extend cmp react/Component)
+            cmp))
 
 (deftest test-adapt-class
   (let [d1 (r/adapt-react-class ndiv)
@@ -990,7 +991,13 @@
             comp4 (fn comp4 []
                     (for [i (range 0 1)]
                       [:p "foo"]))
-            nat (create-react-class #js {:render (fn [])})
+            nat (let [cmp (fn [])]
+                  (gobj/extend
+                    (.-prototype cmp)
+                    (.-prototype react/Component)
+                    #js {:render (fn [])})
+                  (gobj/extend cmp react/Component)
+                  cmp)
             pkg "reagenttest.testreagent."
             stack1 (str "in " pkg "comp1")
             stack2 (str "in " pkg "comp2 > " pkg "comp1")
@@ -1086,7 +1093,7 @@
                (let [old @spy]
                  (is (nil? (r/after-render
                             (fn []
-                              (is (= "DIV" ($ @node :tagName)))
+                              (is (= "DIV" (.-tagName @node)))
                               (swap! spy inc)))))
                  (is (= old @spy))
                  (is (= @exp @val))

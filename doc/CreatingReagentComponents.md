@@ -87,6 +87,25 @@ That isn't valid Hiccup and you'll get a slightly baffling error. You'll have to
      [:div name]])     ;; [:div] containing two nested [:divs]
 ```
 
+Alternatively, you could return a [React Fragment](https://reactjs.org/docs/fragments.html). In reagent, a React Fragment is created using the `:<>` Hiccup form.
+
+```cljs
+(defn right-component
+   [name]
+   [:<>
+     [:div "Hello"]
+     [:div name]])
+```
+
+Referring to the example in [React's documentation](https://reactjs.org/docs/fragments.html), the `Columns` component could be defined in reagent as:
+
+```cljs
+(defn columns
+  [:<>
+    [:td "Hello"]
+    [:td "World"]]
+```
+
 ## Form-2:  A Function Returning A Function
 
 Now, let's take one step up in complexity.  Sometimes, a component requires:
@@ -197,8 +216,6 @@ It is possible to create `Form-3` `components` using `with-meta`.  However, `wit
 In the code sample above, notice that the renderer function is identified via an odd keyword in the map given to `reagent/create-class`. It's called `:reagent-render` rather than the shorter, more obvious `:render`. 
 
 Its a trap to mistakenly use `:render` because you won't get any errors, **except** the function you supply will only ever be called with one parameter, and it won't be the one you expect. [Some details here](https://github.com/reagent-project/reagent/issues/47#issuecomment-61056999).
-
-**Note:** prior to version 0.5.0 you had to use the key `:component-function` instead of `:reagent-render`.
 
 **Rookie mistake**
 
